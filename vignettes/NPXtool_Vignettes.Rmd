@@ -1,0 +1,87 @@
+---
+title: "Normalization_Workflow_Template"
+author: "Jingjing Qi, Icahn School of Medicine"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Normalization_Workflow_Template}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+### Input File Names
+
+```{r, eval=F}
+library(NPXtools)
+library(tidyverse)
+#library(magrittr)
+#library(tidyr)
+#library(SummarizedExperiment)
+
+f.list <- c("~/Downloads/ERGU01_48x48_Plate1_05182021_QUANT.xlsx", 
+            "~/Downloads/ERGU01_48x48_Plate2_05182021_QUANT.xlsx")
+names(f.list) <- f.list
+
+# QUANT file format: startrow = 9
+# NPX file format: startrow = 8
+f.list <- lapply(f.list, read_npx, startrow = 9)
+
+# inspect sample object list
+f.list
+```
+
+### Inspect Sample Name, Create Reference Sample Objects
+
+```{r, eval=F}
+# inspect sample name
+f.list[[1]]$Assay
+
+bridge.ls <- pull_bdg(f.list, pattern = "HD Pool 1017", fields = "Assay")
+
+# inspect reference sample object list
+bridge.ls
+```
+
+### Run Normalization Code
+
+```{r, eval=F}
+# select desired methods to creat the inter-object reference: mean, median, max
+# use max can avoid have potential negative values in the normalized data
+f.list <- bdg_norm(bridge.ls = bridge.ls, data.ls = f.list, between.plate.method = "max")
+```
+
+### Merge List of Normalized Objects and Generate Plots 
+
+```{r, eval=F}
+f.list <- cmb_npx_se(f.list)
+
+plot_npx_norm_qc(normed_se = f.list, bridge_pattern= "HD Pool 1017", fields = "Assay", example = "VEGFA",
+        Randox = F, randox_info_f = "~/Desktop/Olink/Randox_info.csv")
+
+```
+
+### Optional Heatmap
+
+```{r, eval=F}
+coldata <- data.frame(sample = f.list$Assay,
+                      plate = f.list$Plate.ID)%>%
+  mutate(type = toupper(gsub("^.*_", "", sample)))
+
+mat <- f.list@assays@data$inlot_normed
+rownames(coldata) <- colnames(mat)
+pheatmap::pheatmap(mat, cluster_cols = T, cluster_rows = F, scale = "row", annotation_col = coldata, 
+                   color = colorRampPalette(rev(RColorBrewer::brewer.pal(n = 10, name = "RdYlBu")))(150),
+                   show_colnames = F, fontsize = 10, fontsize_row = 12)
+
+```
+
+### Save Data to CSV
+
+```{r, eval=F}
+save_npx_csv(se = f.list, pre_fix = "~/Desktop/ERGU01_48x48_QUANT_", assay2save = c("npx", "inlot_normed"))
+```
+
