@@ -65,12 +65,17 @@
 #
 
 
-read_npx <- function(f, lot = "default", startrow = 8){
+read_npx <- function(f, lot = "default", startrow = 8, type = "NPX"){
 
   f_id <- paste("c", f)
   f_id <- substr(f_id, (nchar(f_id)-10), nchar(f_id))
 
-  npx <- readxl::read_xlsx(f, sheet = which(readxl::excel_sheets(f) == "NPX Data"), col_names = F)
+  if(type != "NPX"){
+    npx <- readxl::read_xlsx(f, sheet = 1, col_names = F)
+  }
+  else{
+    npx <- readxl::read_xlsx(f, sheet = which(readxl::excel_sheets(f) == "NPX Data"), col_names = F)
+  }
 
   #---determin cols
   n_col <- length(npx[which(npx[, 1] == "LOD"), ])

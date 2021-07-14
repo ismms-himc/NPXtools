@@ -34,6 +34,7 @@ f.list <- lapply(f.list, read_npx, startrow = 9)
 f.list
 ```
 
+
 ### Inspect Sample Name, Create Reference Sample Objects
 
 ```{r, eval=F}
@@ -62,7 +63,70 @@ f.list <- cmb_npx_se(f.list)
 plot_npx_norm_qc(normed_se = f.list, bridge_pattern= "HD Pool 1017", fields = "Assay", example = "VEGFA",
         Randox = F, randox_info_f = "~/Desktop/Olink/Randox_info.csv")
 
+
+data.frame(na_count = apply(f.list@assays@data$npx, 1, function(x){
+  sum(is.na(x))
+}))%>%
+  rownames_to_column(var = "Analyt")%>%
+  filter(na_count != 0)
+
+mat <- f.list@assays@data$npx
+mat[is.na(mat)] <- -3.14 
+
+data.frame(Analyt = rownames(mat),
+           lod  = f.list@elementMetadata$LOD,
+           lt_lod = sapply(1 : nrow(mat), function(x){
+  round(sum(mat[x, ] < f.list@elementMetadata$LOD[x])/ncol(mat)*100, 2)
+}))%>%
+  filter(lt_lod != 0)%>%
+  left_join(data.frame(mat)%>%
+              rownames_to_column(var = "Analyt"))%>%
+  mutate(lt_lod = paste(lt_lod, "%"))%>%
+  gather(-Analyt, -lt_lod, -lod, key = "sample", value = "value")%>%
+  ggplot()+
+  geom_jitter(aes(Analyt, value), shape = 21)+
+  geom_jitter(aes(Analyt, lod), shape = 11, color = "red")+
+  geom_text(aes(Analyt, lod, label = lt_lod))+
+  labs(title = "Count of Analyt with value less than LOD")+
+  theme_bw()
+  
+
+
 ```
+
+### Summarize Percentage Missing
+```{r}
+data.frame(na_count = apply(f.list@assays@data$npx, 1, function(x){
+  sum(is.na(x))
+}))%>%
+  rownames_to_column(var = "Analyt")%>%
+  filter(na_count != 0)
+
+mat <- f.list@assays@data$npx
+mat[is.na(mat)] <- -3.14 
+
+```
+
+### Summarize below LOD
+```{r}
+data.frame(Analyt = rownames(mat),
+           lod  = f.list@elementMetadata$LOD,
+           lt_lod = sapply(1 : nrow(mat), function(x){
+  round(sum(mat[x, ] < f.list@elementMetadata$LOD[x])/ncol(mat)*100, 2)
+}))%>%
+  filter(lt_lod != 0)%>%
+  left_join(data.frame(mat)%>%
+              rownames_to_column(var = "Analyt"))%>%
+  mutate(lt_lod = paste(lt_lod, "%"))%>%
+  gather(-Analyt, -lt_lod, -lod, key = "sample", value = "value")%>%
+  ggplot()+
+  geom_jitter(aes(Analyt, value), shape = 21)+
+  geom_jitter(aes(Analyt, lod), shape = 11, color = "red")+
+  geom_text(aes(Analyt, lod, label = lt_lod))+
+  labs(title = "Count of Analyt with value less than LOD")+
+  theme_bw()
+```
+
 
 ### Optional Heatmap
 

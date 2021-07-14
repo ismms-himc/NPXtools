@@ -21,7 +21,7 @@ cmb_npx_se <- function(se_list){
   Uniprot.ID <- as.character(se_list[[1]]@elementMetadata[[1]])
 
   se_list <- lapply(se_list, function(x){
-    x@colData <- x@colData[com_col]
+    x@colData <- x@colData[match(com_col, names(x@colData@listData))]
     x@elementMetadata@listData <- data.frame()
     x
   })
