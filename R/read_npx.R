@@ -2,7 +2,6 @@
 #'@description  read npx raw file to create a summarizedexperiment
 #'              uniportID and LOD in rowfeatures
 #'              file name, ctrl and qc warning are in the colData
-#'@export
 #'@param f a string file path
 #'@param lot: optional parameter to record lot information
 #'@param startrow 8 for npx, 9 for quant

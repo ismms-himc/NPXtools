@@ -14,11 +14,20 @@ cmb_npx_se <- function(se_list){
   com_col <- unlist(lapply(se_list, function(x) {x@colData%>%colnames()}))%>%table()
   com_col <- names(com_col)[com_col == length(se_list)]
 
-  rowdata_list <- sapply(se_list, function(x){
-    as.numeric(x@elementMetadata@listData$LOD)
+  rowdata_list <- lapply(se_list, function(x){
+    temp <- data.frame(x@elementMetadata@listData)
+    colnames(temp) <- paste(colnames(temp), x$Plate.ID[1], sep = "_")
+    temp
   })
+  row_data <- rowdata_list[[1]]
+  colnames(row_data)[1] <- "Analyt"
 
-  Uniprot.ID <- as.character(se_list[[1]]@elementMetadata[[1]])
+  for (i in 2 : length(rowdata_list)) {
+    row_data <- cbind(row_data, rowdata_list[[i]][ ,-c(1,2)]) #Analyt Assay
+  }
+
+  colnames(row_data) <- make.names(colnames(row_data), unique = T)
+  row_data$LOD <- rowMeans(row_data[ , grepl("LOD", colnames(row_data))])
 
   se_list <- lapply(se_list, function(x){
     x@colData <- x@colData[match(com_col, names(x@colData@listData))]
@@ -29,8 +38,6 @@ cmb_npx_se <- function(se_list){
   for (i in 2 : length(se_list)) {
     temp <- cbind(temp, se_list[[i]])
   }
-  rowData(temp) <- data.frame(Uniprot.ID = Uniprot.ID,
-                              Analyt = make.names(rownames(se_list[[1]])),
-                              LOD = as.numeric(rowMeans(rowdata_list, na.rm = T)))
+  rowData(temp) <- row_data
   return(temp)
 }

@@ -14,6 +14,6 @@ save_npx_csv <- function(se, pre_fix, assay2save = c("npx_default", "npx_inlot_n
   }
   f_name <- paste0(pre_fix, "_meta.csv")
   write.csv(data.frame(se@colData@listData), file = f_name, row.names = F)
-  f_name <- paste0(pre_fix, "_rowfwature.csv")
+  f_name <- paste0(pre_fix, "_rowfeature.csv")
   write.csv(data.frame(se@elementMetadata@listData), file = f_name, row.names = F)
 }

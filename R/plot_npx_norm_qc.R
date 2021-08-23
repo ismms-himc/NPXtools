@@ -23,7 +23,7 @@
 #'@export
 #'@md
 #'
-plot_npx_norm_qc <- function(normed_se, bridge_pattern= "HD Urine Pool", fields = "Sample", example = NULL,
+plot_npx_norm_qc <- function(normed_se, bridge_pattern= "HD Urine Pool", fields = "Assay", example = NULL,
                     Randox = F, randox_info_f = NULL){
 
   bridge <- normed_se[, grep(bridge_pattern, normed_se[[fields]])]
