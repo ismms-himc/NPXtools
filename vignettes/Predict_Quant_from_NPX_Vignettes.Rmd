@@ -1,0 +1,343 @@
+---
+title: "Imputated Quant Value from fitted STD curve"
+output: html_document
+---
+
+```{r setup, include=FALSE, echo=F}
+knitr::opts_chunk$set(echo = TRUE)
+#library(splines)
+#library(gamm4)
+library(dplyr)
+library(magrittr)
+library(SummarizedExperiment)
+library(aws.s3)
+source("~/Desktop/NPXtools/R/read_npx.R")
+source("~/Desktop/NPXtools/R/bdg_norm.R")
+source("~/Desktop/NPXtools/R/cmb_npx_se.R")
+
+Sys.setenv()
+```
+
+
+## generat fitting curve 
+use a list object of npx and a list object of quant paired with the same <name>.    
+at least 1 file is required in the list, at least 1 analyte/plate has both npx and quant value.     
+
+this workbook use run001-run010 empirical data generated the standard curve.    
+predicted quant value and the targeted value was compared use run011-020    
+
+```{r, eval=F}
+my_Bucket <- bucketlist()
+#---
+my_Bucket <- my_Bucket[my_Bucket$Bucket == "himc-project-data", 1]
+my_Bucket_file <- get_bucket(my_Bucket, prefix = "MSC", max = Inf)
+f.list <- sapply(my_Bucket_file, function(x){
+  x[[1]]
+}) 
+f.list <- f.list[grepl(".*NPX.xlsx", f.list)]
+names(f.list) <- f.list
+
+# QUANT file format: startrow = 9
+# NPX file format: startrow = 8
+f.list <- lapply(f.list, function(x){
+  temp <- try(s3read_using(FUN = read_npx, object = x, bucket = my_Bucket, startrow = 8))
+  temp$f_name <- x
+  temp
+})
+
+
+f.list.quant <- sapply(my_Bucket_file, function(x){
+  x[[1]]
+}) 
+f.list.quant <- f.list.quant[grepl(".*QUANT.xlsx", f.list.quant)]
+names(f.list.quant) <- f.list.quant
+
+# QUANT file format: startrow = 9
+# NPX file format: startrow = 8
+f.list.quant <- lapply(f.list.quant, function(x){
+  temp <- try(s3read_using(FUN = read_npx, object = x, bucket = my_Bucket, startrow = 9, type = "QUANT"))
+  temp$f_name <- x
+  temp
+})
+
+names(f.list) <- gsub("(.*/|_QUANT.xlsx|_NPX.xlsx)", "", names(f.list) )
+names(f.list.quant) <- gsub("(.*/|_QUANT.xlsx|_NPX.xlsx)", "", names(f.list.quant) )
+names(f.list) == names(f.list.quant)
+
+
+make.names(rownames(f.list[[1]]))
+marker <- "IL17F"
+quant_npx <- lapply(make.names(rownames(f.list[[1]])), function(y){
+  lapply(names(f.list), function(x){
+  data.frame(NPX = f.list[[x]]@assays@data$npx[rownames(f.list[[x]]) == y, ],
+             Quant = f.list.quant[[x]]@assays@data$npx[rownames(f.list.quant[[x]]) == y, ],
+             run = x,
+             lod = f.list[[x]]@elementMetadata$LOD[rownames(f.list.quant[[x]]) == y]%>%as.numeric())
+   })%>%
+     do.call(what = rbind)%>%
+     mutate(analyt = y)
+})%>%
+  do.call(what = rbind)
+
+lod <- distinct(quant_npx)%>%
+  select(analyt, lod)%>%
+  group_by(analyt)%>%
+  summarise(lod = median(lod, na.rm = T))
+
+# npx to quant association plot  is.na(quant) is in the range of avaliable npx
+quant_npx%>%
+  mutate(Quant = ifelse(is.na(Quant), 0, Quant))%>%
+  ggplot()+
+  geom_point(aes(NPX, log10(Quant), color = run), shape = 21)+
+  geom_vline(aes(xintercept = lod), data = lod, color = "red")+
+  facet_wrap(~analyt, ncol = 10, scales = "free")+
+  theme_bw()
+
+
+lapply(names(f.list), function(x){
+  try(lm(log10(Quant) ~ NPX, na.action = na.exclude,
+     data = quant_npx%>%
+       filter(run == x)))
+})
+
+analyts <- unique(quant_npx$analyt)
+names(analyts) <- analyts
+
+# distribution of NPX
+#cor_plots <- lapply(analyts, function(x){
+#  data.frame(NPX = quant_npx$NPX,
+#             Quant = quant_npx$Quant,
+#             analyts = quant_npx$analyt,
+#             run = quant_npx$run)%>%
+#    filter(run == "MSC_Target48_Run001", analyts == x)%>%
+#    filter(NPX > quantile(NPX, probs = 0.02, na.rm = T), NPX < quantile(NPX, probs = 0.98, na.rm = T))%>%
+#    ggplot()+
+#    #geom_density(aes(x = NPX))+
+#    #geom_density(aes(x = Quant))+
+#    geom_density(aes(x = log10(Quant)))+
+#    labs(title = x)+
+#    theme_bw()
+#})
+#wrap_plots(cor_plots, ncol = 10)
+#
+
+fit_list_48plx <- lapply(analyts, function(x){
+  df <- quant_npx%>%
+    filter(analyt == x, !is.na(Quant), !is.na(NPX))
+  if(x == "IL4"){
+    lm(log10(Quant) ~ splines::ns(NPX, knots = c(1, 2, 4)), data = df) # smoothspine didnt converge changed to fix knots spline, validated with test data.
+  }else{
+    smooth.spline(y = log10(df$Quant), x = df$NPX, cv = T)
+  }
+    
+}) 
+
+
+#saveRDS(fit_list_48plx, file = "~/Downloads/fit_list_48plx_run001_to_run010.rds")
+```
+
+## pipeline predict quant using npx
+use a list object of npx and a list object of quant paired with the same <name>.   
+According to Olink, the STD curve binds to a given kit lot.     
+
+```{r, eval=F}
+library(aws.s3)
+
+Sys.setenv()
+
+my_Bucket <- bucketlist()
+#---
+my_Bucket <- my_Bucket[my_Bucket$Bucket == "himc-project-data", 1]
+my_Bucket_file <- get_bucket(my_Bucket, prefix = "MSC", max = Inf)
+
+f.list <- sapply(my_Bucket_file, function(x){
+  x[[1]]
+}) 
+f.list <- f.list[grepl(".*NPX.xlsx", f.list)]
+names(f.list) <- f.list
+
+# QUANT file format: startrow = 9
+# NPX file format: startrow = 8
+f.list <- lapply(f.list, function(x){
+  temp <- try(s3read_using(FUN = read_npx, object = x, bucket = my_Bucket, startrow = 8))
+  temp$f_name <- x
+  temp
+})
+
+
+f.list.quant_to_replace <- sapply(my_Bucket_file, function(x){
+  x[[1]]
+}) 
+f.list.quant_to_replace <- f.list.quant_to_replace[grepl(".*QUANT.xlsx", f.list.quant_to_replace)]
+names(f.list.quant_to_replace) <- f.list.quant_to_replace
+
+# QUANT file format: startrow = 9
+# NPX file format: startrow = 8
+f.list.quant_to_replace <- lapply(f.list.quant_to_replace, function(x){
+  temp <- try(s3read_using(FUN = read_xlsx, object = x, bucket = my_Bucket, sheet = 1, col_names = F))
+  temp
+})
+
+names(f.list) <- gsub("(.*/|_QUANT.xlsx|_NPX.xlsx)", "", names(f.list) )
+names(f.list.quant_to_replace) <- gsub("(.*/|_QUANT.xlsx|_NPX.xlsx)", "", names(f.list.quant_to_replace) )
+names(f.list) == names(f.list.quant_to_replace)
+
+fit_list_48plx <- readRDS("~/Downloads/fit_list_48plx_run001_to_run010.rds")
+```
+
+## generate predicted file     
+output:    
+save Quant csv with name: list<name>__Quant_Predicted.csv    
+
+
+```{r, eval=F}
+names(f.list)
+#plt2pdt <- "MSC_Target48_Run009"
+pre_fix <- "~/Downloads/"
+
+pdt_quant <- sapply(rownames(f.list[[plt2pdt]]), function(x){
+  test <- f.list[[plt2pdt]]@assays@data$npx[rownames(f.list[[plt2pdt]]) == x, ]
+  na_idx <- which(is.na(test))
+  test[na_idx] <- 1
+  if(x == "IL4"){
+    re <- predict(fit_list_48plx[[x]], newdata = list(NPX = test))
+  }else{
+    re <- predict(fit_list_48plx[[x]], x = test)$y
+  }
+  re[na_idx] <- NA
+  round(10^re, 5) # back to origional scale
+})
+
+quant_to_replace <- f.list.quant_to_replace[[plt2pdt]]
+npx_mat <- t(f.list[[plt2pdt]]@assays@data$npx)
+
+for (x in colnames(pdt_quant)) {
+  idx <- which(quant_to_replace[4, ] == x)
+  col_to_replace <- quant_to_replace[9 : (9 + nrow(pdt_quant) - 1), idx]
+  idx_char <- which(is.na(sapply(col_to_replace, as.numeric)))
+  
+  replace_col <- as.character(pdt_quant[, x])
+  
+  npx_check <- npx_mat[ , x]
+  
+  if(sum(is.na(npx_check)) == nrow(col_to_replace)){
+    replace_col <- "No Data"
+  }
+  if(!is.null(idx_char) & (length(idx_char) != nrow(col_to_replace))){
+    for (i in idx_char) {
+      replace_col[i] <- unlist(col_to_replace)[i]
+    }
+  }else{
+    quant_to_replace[9 : (9 + nrow(pdt_quant) - 1), idx] <- replace_col
+  }
+}
+
+colnames(quant_to_replace) <- NULL
+f_name <- paste0(pre_fix, plt2pdt, "_Quant_Predicted.csv")
+write.csv(quant_to_replace, f_name, row.names = F, na = "")
+```
+
+## validate correlation of predicted quant and software exported quant
+
+```{r, eval=F}
+test = read.xlsx("~/Downloads/pngparsed_analyt(AutoRecovered).xlsx", sheetIndex = 1)
+colnames(test)
+plt2pdt <- "MSC_Target48_Run012"
+r2_pdt_quant <- sapply(analyts, function(x){
+  if(x == "IL4"){
+    predict(fit_list_48plx[[x]], newdata = list(NPX = f.list[[plt2pdt]]@assays@data$npx[rownames(f.list[[plt2pdt]]) == x, ]))
+  }else{
+    predict(fit_list_48plx[[x]], x = f.list[[plt2pdt]]@assays@data$npx[rownames(f.list[[plt2pdt]]) == x, ])$y
+  }
+})
+
+f.list[[plt2pdt]]$Assay
+dim(f.list[[plt2pdt]])
+
+
+cor_plots <- lapply(analyts, function(x){
+  data.frame(Quant_software = log10(f.list.quant[[plt2pdt]]@assays@data$npx[rownames(f.list[[plt2pdt]]) == x, ]),
+             Quant_predicted = r2_pdt_quant[ , colnames(r2_pdt_quant) == x])%>%
+  ggscatter(x = "Quant_software", y = "Quant_predicted", palette = "jco",
+   add = "reg.line", conf.int = F)+
+   stat_cor(label.x.npc = 0.2, color = "red")+
+    labs(title = x)+
+    theme_bw()
+})
+
+wrap_plots(cor_plots, ncol = 10)
+
+marker <- "IL10"
+data.frame(Quant_screenshot = test$Run002_IL10_Quanti[-c(24, 30, 36, 42, 48)],
+             Quant_predicted = 10^r2_pdt_quant[ , colnames(pdt_quant) == marker])%>%
+  ggscatter(x = "Quant_screenshot", y = "Quant_predicted", palette = "jco",
+   add = "reg.line", conf.int = F)+
+   stat_cor(label.x.npc = 0.2, color = "red")+
+    labs(title = "Run002_IL10_Quanti")+
+    theme_bw()
+
+```
+
+## validate correlation of predicted quant and software screenshot quant
+
+```{r, eval=F}
+colnames(test)
+plt2pdt <- "MSC_Target48_Run006"
+r2_pdt_quant <- sapply(analyts, function(x){
+  if(x == "IL4"){
+    predict(fit_list_48plx[[x]], newdata = list(NPX = f.list[[plt2pdt]]@assays@data$npx[rownames(f.list[[plt2pdt]]) == x, ]))
+  }else{
+    predict(fit_list_48plx[[x]], x = f.list[[plt2pdt]]@assays@data$npx[rownames(f.list[[plt2pdt]]) == x, ])$y
+  }
+})
+
+f.list[[plt2pdt]]$Assay
+dim(f.list[[plt2pdt]])
+
+marker <- "IL10"
+data.frame(Quant_screenshot = test$Run006_IL10_Quanti[-c(24, 30, 36, 42, 48)][-6],
+             Quant_predicted = 10^r2_pdt_quant[ , colnames(pdt_quant) == marker])%>%
+  ggscatter(x = "Quant_screenshot", y = "Quant_predicted", palette = "jco",
+   add = "reg.line", conf.int = F)+
+   stat_cor(label.x.npc = 0.2, color = "red")+
+    labs(title = "Run006_IL10_Quanti")+
+    theme_bw()
+
+marker <- "IL2"
+data.frame(Quant_screenshot = test$Run006_IL2_Quanti[-c(24, 30, 36, 42, 48)][-6],
+             Quant_predicted = 10^r2_pdt_quant[ , colnames(pdt_quant) == marker])%>%
+  ggscatter(x = "Quant_screenshot", y = "Quant_predicted", palette = "jco",
+   add = "reg.line", conf.int = F)+
+   stat_cor(label.x.npc = 0.2, color = "red")+
+    labs(title = "Run006_IL2_Quanti")+
+    theme_bw()
+```
+
+## validate correlation of predicted quant and software screenshot quant
+
+```{r, eval=F}
+colnames(test)
+plt2pdt <- "MSC_Target48_Run008"
+r2_pdt_quant <- sapply(analyts, function(x){
+  if(x == "IL4"){
+    predict(fit_list_48plx[[x]], newdata = list(NPX = f.list[[plt2pdt]]@assays@data$npx[rownames(f.list[[plt2pdt]]) == x, ]))
+  }else{
+    predict(fit_list_48plx[[x]], x = f.list[[plt2pdt]]@assays@data$npx[rownames(f.list[[plt2pdt]]) == x, ])$y
+  }
+})
+
+f.list[[plt2pdt]]$Assay
+dim(f.list[[plt2pdt]])
+
+marker <- "IL10"
+data.frame(Quant_screenshot = test$Run008_IL10_Quanti[-c(24, 30, 36, 42, 48)],
+             Quant_predicted = 10^r2_pdt_quant[ , colnames(pdt_quant) == marker])%>%
+  ggscatter(x = "Quant_screenshot", y = "Quant_predicted", palette = "jco",
+   add = "reg.line", conf.int = F)+
+   stat_cor(label.x.npc = 0.2, color = "red")+
+    labs(title = "Run006_IL10_Quanti")+
+    theme_bw()
+
+```
+
+

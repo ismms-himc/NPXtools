@@ -27,7 +27,7 @@ cmb_npx_se <- function(se_list){
   }
 
   colnames(row_data) <- make.names(colnames(row_data), unique = T)
-  row_data$LOD <- rowMeans(row_data[ , grepl("LOD", colnames(row_data))])
+  row_data$LOD <- rowMeans(row_data[ , grepl("LOD", colnames(row_data))], na.rm = T)
 
   se_list <- lapply(se_list, function(x){
     x@colData <- x@colData[match(com_col, names(x@colData@listData))]

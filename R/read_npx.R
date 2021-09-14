@@ -1,7 +1,8 @@
 #'read_npx (read onlink npx file to summarizedexperiment)
 #'@description  read npx raw file to create a summarizedexperiment
 #'              uniportID and LOD in rowfeatures
-#'              file name, ctrl and qc warning are in the colData
+#'              file name, ctrl and qc warning are in the colData.
+#'              read predicted Quant csv, raw Quant xlsx.
 #'@param f a string file path
 #'@param lot: optional parameter to record lot information
 #'@param startrow 8 for npx, 9 for quant
@@ -70,14 +71,20 @@ read_npx <- function(f, lot = "default", startrow = 8, type = "NPX"){
   f_id <- substr(f_id, (nchar(f_id)-10), nchar(f_id))
 
   if(type != "NPX"){
-    npx <- readxl::read_xlsx(f, sheet = 1, col_names = F)
+    if(grepl("xlsx", f)){
+      npx <- readxl::read_xlsx(f, sheet = 1, col_names = F)
+    }else{
+      npx <- read.csv(f, header = F)
+    }
+    n_col <- length(npx[which(npx[, 1] == "LLOQ"), ])
+    npx[npx == ""] <- NA
   }
   else{
     npx <- readxl::read_xlsx(f, sheet = which(readxl::excel_sheets(f) == "NPX Data"), col_names = F)
+    n_col <- length(npx[which(npx[, 1] == "LOD"), ])
   }
 
-  #---determin cols
-  n_col <- length(npx[which(npx[, 1] == "LOD"), ])
+
   npx <- npx[, 1:n_col]
   sw_version <- npx[1, 2]
   npx_panel <- npx[3, 2]
@@ -91,6 +98,7 @@ read_npx <- function(f, lot = "default", startrow = 8, type = "NPX"){
   row_feat <- rbind(npx[4 : 5, -ctrl_col_idx])
 
   npx <- npx[startrow : nrow(npx), -ctrl_col_idx]
+
   row_feat <- rbind(row_feat, npx[(min(which(is.na(npx[ , 1]))) + 1): nrow(npx), ])
 
   npx <- npx[1 : (min(which(is.na(npx[, 1]))) - 1), ]
@@ -104,17 +112,26 @@ read_npx <- function(f, lot = "default", startrow = 8, type = "NPX"){
     set_colnames(unlist(row_feat[, 1]))%>%
     set_rownames(.$Assay)
   colnames(rowData)[grep("LOD", colnames(rowData))] <- "LOD"
+  rowData$LOD <- as.numeric(rowData$LOD)
 
   colData <- cbind(unique_id, Assay = npx$Assay, f_name = toString(f), npx_ctrl)%>%
     setNames(make.names(names(.), unique = TRUE))%>%
     dplyr::mutate_at(.vars = dplyr::vars(dplyr::matches("Ctrl")), .funs = as.numeric)%>%
     data.frame(row.names = unique_id)
-  npx <- cbind(unique_id, npx)%>%
-    dplyr::mutate_at(.vars = dplyr::vars(!dplyr::matches("(unique_id|Assay)")),
-                     .funs = as.numeric) %>%
-    data.frame(row.names = unique_id) %>%
-    dplyr::select(-unique_id, -Assay)%>%
-    t()
+
+  if(type != "NPX"){
+    npx <- cbind(unique_id, npx)%>%
+      data.frame(row.names = unique_id) %>%
+      dplyr::select(-unique_id, -Assay)%>%
+      t()
+  }else{
+    npx <- cbind(unique_id, npx)%>%
+      dplyr::mutate_at(.vars = dplyr::vars(!dplyr::matches("(unique_id|Assay)")),
+                       .funs = as.numeric) %>%
+      data.frame(row.names = unique_id) %>%
+      dplyr::select(-unique_id, -Assay)%>%
+      t()
+  }
   re <- SummarizedExperiment(colData = colData,
                              rowData = rowData,
                              assays = list(npx = npx),
