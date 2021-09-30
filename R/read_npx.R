@@ -132,6 +132,8 @@ read_npx <- function(f, lot = "default", startrow = 8, type = "NPX"){
       dplyr::select(-unique_id, -Assay)%>%
       t()
   }
+
+  format(npx, digits = 5)
   re <- SummarizedExperiment(colData = colData,
                              rowData = rowData,
                              assays = list(npx = npx),

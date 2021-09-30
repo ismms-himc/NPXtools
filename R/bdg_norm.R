@@ -46,7 +46,7 @@ bdg_norm <- function(bridge.ls, data.ls, between.plate.method = "median",
 
   data.ls <- lapply(query, function(x){
     temp <- data.ls[[x]]
-    temp@assays@data[[save_assay]] <- temp@assays@data[[from_assay]] - unlist(bridge.adj[[x]])
+    temp@assays@data[[save_assay]] <- (temp@assays@data[[from_assay]] - unlist(bridge.adj[[x]]))%>%round(5)
     temp@elementMetadata$LOD <- as.numeric(temp@elementMetadata$LOD) - unlist(bridge.adj[[x]])
     temp
   })

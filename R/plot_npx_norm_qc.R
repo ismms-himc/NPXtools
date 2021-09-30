@@ -61,7 +61,8 @@ plot_npx_norm_qc <- function(normed_se, bridge_pattern= "HD Urine Pool", fields 
     labs(title = "Bridge QC Reference")+
     facet_grid( ~ Assay)+
     theme_bw()+
-    theme(legend.position = "none")+
+    theme(legend.position = "bottom")+
+    guides(color=guide_legend(nrow=2,byrow=TRUE))+
     theme(axis.text.x = element_text(angle = 60, hjust = 1))
 
   re <- list("all" = p1)

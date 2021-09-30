@@ -1,21 +1,25 @@
 ---
-title: "Imputated Quant Value from fitted STD curve"
-output: html_document
+title: "Predict_Quant_from_NPX_Vignettes"
+author: "Jingjing Qi, Icahn School of Medicine"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Predict_Quant_from_NPX_Vignettes}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
 ---
 
 ```{r setup, include=FALSE, echo=F}
 knitr::opts_chunk$set(echo = TRUE)
 #library(splines)
 #library(gamm4)
-library(dplyr)
-library(magrittr)
-library(SummarizedExperiment)
-library(aws.s3)
-source("~/Desktop/NPXtools/R/read_npx.R")
-source("~/Desktop/NPXtools/R/bdg_norm.R")
-source("~/Desktop/NPXtools/R/cmb_npx_se.R")
+#library(dplyr)
+#library(magrittr)
+#library(SummarizedExperiment)
+#library(aws.s3)
+#source("~/Desktop/NPXtools/R/read_npx.R")
+#source("~/Desktop/NPXtools/R/bdg_norm.R")
+#source("~/Desktop/NPXtools/R/cmb_npx_se.R")
 
-Sys.setenv()
 ```
 
 

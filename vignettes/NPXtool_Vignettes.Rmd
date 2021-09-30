@@ -12,7 +12,6 @@ vignette: >
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-s
 ### Input File Names
 
 ```{r, eval=F}
@@ -64,7 +63,7 @@ f.list <- lapply(f.list, function(x){
 ```
 
 
-```{r}
+```{r, eval=F}
 match2location <- function(se, 
                            byrow = T, 
                            drop_list_pattern = "HDPlasma_1017"){
@@ -96,7 +95,7 @@ match2location <- function(se,
 
 ### Locatioin-wise heatmap
 
-```{r}
+```{r, eval=F}
 match2location <- function(se, 
                            byrow = T, 
                            drop_list_pattern = "HDPlasma_1017"){
@@ -131,7 +130,7 @@ mats <- lapply(f.list, function(x){
   print(pheatmap::pheatmap(temp, 
                            cluster_rows = F, cluster_cols = F, 
                            scale = "none", 
-                           display_numbers = round(mat1, 2))
+                           display_numbers = round(temp, 2))
         )
 })
 
@@ -168,7 +167,7 @@ plot_npx_norm_qc(normed_se = f.list, bridge_pattern= "HD Pool 1017", fields = "A
 ```
 
 ### Summarize Percentage Missing
-```{r}
+```{r, eval=F}
 data.frame(na_count = apply(f.list@assays@data$npx, 1, function(x){
   sum(is.na(x))
 }))%>%
@@ -181,7 +180,7 @@ mat[is.na(mat)] <- -3.14
 ```
 
 ### Summarize below LOD
-```{r}
+```{r, eval=F}
 data.frame(Analyt = rownames(mat)%>%make.names(),
            lod  = f.list@elementMetadata$LOD%>%as.numeric(),
            lt_lod = sapply(1 : nrow(mat), function(x){
@@ -213,7 +212,7 @@ data.frame(f.list@colData@listData)%>%
 
 ### QC Warning Distribution 
 
-```{r}
+```{r, eval=F}
 cutoff <- 0.35
 data.frame(abs_dev = abs(as.numeric(pmax(f.list$QC.Deviation.from.median, f.list$QC.Deviation.from.median.1))) < cutoff,
            t(f.list@assays@data$npx))%>%
