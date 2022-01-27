@@ -14,6 +14,15 @@ cmb_npx_se <- function(se_list){
   com_col <- unlist(lapply(se_list, function(x) {x@colData%>%colnames()}))%>%table()
   com_col <- names(com_col)[com_col == length(se_list)]
 
+  com_row <- rownames(se_list[[1]])
+  for (i in 2 : length(se_list)) {
+    com_row <- intersect(com_row, rownames(se_list[[i]]))
+  }
+
+  se_list <- lapply(se_list, function(x){
+    x[match(com_row, rownames(x)), ]
+  })
+
   rowdata_list <- lapply(se_list, function(x){
     temp <- data.frame(x@elementMetadata@listData)
     colnames(temp) <- paste(colnames(temp), x$Plate.ID[1], sep = "_")

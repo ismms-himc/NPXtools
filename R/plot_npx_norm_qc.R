@@ -54,10 +54,12 @@ plot_npx_norm_qc <- function(normed_se, bridge_pattern= "HD Urine Pool", fields 
     mutate(f_name = gsub("\\.[0-9]+$", "", f_name))
 
   p1 <- bridge_data_ls %>%
-    mutate(Assay = factor(Assay, levels = c("npx", "inlot_normed")))%>%
+    mutate(Assay = factor(Assay, levels = c("npx", "normed")))%>%
     ggplot()+
     geom_point(aes(value, Analyt, color = f_name), shape = 21, size = 4)+
-    geom_point(aes(LOD, Analyt), data = data.frame(normed_se@elementMetadata))+
+    geom_point(aes(LOD, Analyt),
+               data = data.frame(normed_se@elementMetadata)%>%
+                 mutate(Analyt = make.names(Analyt)))+
     labs(title = "Bridge QC Reference")+
     facet_grid( ~ Assay)+
     theme_bw()+
@@ -70,11 +72,11 @@ plot_npx_norm_qc <- function(normed_se, bridge_pattern= "HD Urine Pool", fields 
   if(!is.null(example)){
     p2 <- bridge_data_ls %>%
       dplyr::filter(Analyt == example)%>%
-      mutate(Assay = factor(Assay, levels = c("npx", "inlot_normed")))%>%
+      mutate(Assay = factor(Assay, levels = c("npx", "normed")))%>%
       ggplot()+
       geom_point(aes(value, f_name, color = f_name), shape = 16, size = 6)+
-      geom_vline(xintercept = normed_se@elementMetadata$LOD[normed_se@elementMetadata$Analyt == example],
-                 color = "red", linetype = 2)+
+      #geom_vline(xintercept = normed_se@elementMetadata$LOD[normed_se@elementMetadata$Analyt == example],
+      #           color = "red", linetype = 2)+
       labs(title = "Example Bridge QC Reference")+
       facet_wrap( ~ Assay, nrow = 1)+
       theme_bw()+
@@ -84,11 +86,11 @@ plot_npx_norm_qc <- function(normed_se, bridge_pattern= "HD Urine Pool", fields 
 
     p3 <- normed_se_ls %>%
       dplyr::filter(Analyt == example)%>%
-      mutate(Assay = factor(Assay, levels = c("npx", "inlot_normed")))%>%
+      mutate(Assay = factor(Assay, levels = c("npx", "normed")))%>%
       ggplot()+
       geom_jitter(aes(value, f_name, color = f_name), shape = 21, size = 6)+
-      geom_vline(xintercept = normed_se@elementMetadata$LOD[normed_se@elementMetadata$Analyt == example],
-                 color = "red", linetype = 2)+
+      #geom_vline(xintercept = normed_se@elementMetadata$LOD[normed_se@elementMetadata$Analyt == example],
+      #           color = "red", linetype = 2)+
       labs(title = "Example Analyt QC Reference")+
       facet_wrap( ~ Assay, nrow = 1)+
       theme_bw()+
@@ -132,7 +134,7 @@ plot_npx_norm_qc <- function(normed_se, bridge_pattern= "HD Urine Pool", fields 
       p0 <- randox_data_ls %>%
         dplyr::filter(Analyt == y)%>%
         mutate(Assay = gsub("(CIMAC_10026_|_NPX.xlsx)", "", Assay))%>%
-        mutate(Assay = factor(Assay, levels = c("npx", "inlot_normed")))%>%
+        mutate(Assay = factor(Assay, levels = c("npx", "normed")))%>%
         ggplot()+
         geom_point(aes(f_name, value, color = Randox), shape = 21, size = 6)+
         geom_hline(yintercept = normed_se@elementMetadata$LOD[normed_se@elementMetadata$Analyt == y],
