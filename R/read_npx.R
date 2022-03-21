@@ -117,6 +117,7 @@ read_npx <- function(f, lot = "default", startrow = 8, type = "NPX"){
   colData <- cbind(unique_id, Assay = npx$Assay, f_name = toString(f), npx_ctrl)%>%
     setNames(make.names(names(.), unique = TRUE))%>%
     dplyr::mutate_at(.vars = dplyr::vars(dplyr::matches("Ctrl")), .funs = as.numeric)%>%
+    dplyr::mutate_at(.vars = dplyr::vars(dplyr::matches("QC.Deviation")), .funs = as.numeric)%>%
     data.frame(row.names = unique_id)
 
   if(type != "NPX"){
