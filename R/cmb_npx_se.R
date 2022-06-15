@@ -1,11 +1,10 @@
 #'cmb_npx_se (Merge a list of npx summarizedexperiment to one)
-#'@description combine multiple npx summarizedexperiment obj
-#'             only common analyt would reimain in the merged object,
-#'             the LOD stored in the merged object will be the mean from all
-#'             individual npx objects
-#'@param se_list list of npx summarizedexperiment obj
-#'rowData will be removed, common colData
-#'@return combined summarizedexperiment obj
+#'@description combine a list npx summarizedexperiment objects to a single summarizedexperiment object.
+#'             if the multiple object includes different panels, only common analytes would be kept in the combined object.
+#'             the listData in elementMetadata slot will be expanded to include all objects combined with surfix of '_Plate.ID',
+#'             a additional LOD column stores the mean from all individual npx objects.
+#'@param se_list a list of npx summarizedexperiment objects.
+#'@return a combined summarizedexperiment object.
 #'@export
 #'@md
 #'
@@ -29,7 +28,7 @@ cmb_npx_se <- function(se_list){
     temp
   })
   row_data <- rowdata_list[[1]]
-  colnames(row_data)[1] <- "Analyt"
+  colnames(row_data)[1] <- "Analyte"
 
   for (i in 2 : length(rowdata_list)) {
     row_data <- cbind(row_data, rowdata_list[[i]][ ,-c(1,2)]) #Analyt Assay

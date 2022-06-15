@@ -10,18 +10,15 @@ vignette: >
 
 ```{r setup, include=FALSE, echo=F}
 knitr::opts_chunk$set(echo = TRUE)
-#library(splines)
-#library(gamm4)
-#library(dplyr)
-#library(magrittr)
-#library(SummarizedExperiment)
-#library(aws.s3)
-#source("~/Desktop/NPXtools/R/read_npx.R")
-#source("~/Desktop/NPXtools/R/bdg_norm.R")
-#source("~/Desktop/NPXtools/R/cmb_npx_se.R")
-
 ```
 
+```{r, eval=F}
+library(tidyverse) 
+library(NPXtools)
+#library(magrittr)
+#library(tidyr)
+#library(SummarizedExperiment)
+```
 
 ## generat fitting curve 
 use a list object of npx and a list object of quant paired with the same <name>.    

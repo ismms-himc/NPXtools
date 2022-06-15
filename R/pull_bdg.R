@@ -1,11 +1,10 @@
 #'pull_bdg (creat summarizedexperiment of only reference sampls from a list of summarizedexperiments by identifing patterns)
-#'@description pull bridging sample from list of summarizeexperiment object by pattern string
-#'             get bridging sample only before normalization by plate
+#'@description subset a npx summarizeexperiment object by filter a column in colData.
 #'
-#'@param f_list list of summarizeexperiment objects
-#'@param pattern sting pattern used for regex to identify samples
-#'@param fields colData name from which to identify sample
-#'@return list of summarizedexperiment obj
+#'@param f_list a single or a list of summarizeexperiment objects.
+#'@param pattern sting pattern used for regex to identify columns to be subset.
+#'@param fields a colData name from which is used for subsetting.
+#'@return a single or a list of subset summarizeexperiment objects.
 #'@export
 #'@md
 #'
