@@ -14,7 +14,7 @@
 #'@export
 #'@md
 #'
-bdg_norm_multi <- function(bridge.str, data.ls, between.plate.method = "median",
+bdg_norm_multi <- function(bridge.str, data.ls, between.plate.method = "median", ref_batch = NULL,
                      from_assay = "npx", save_assay = "normed"){
   if(
     sapply(bridge.str, function(x){
@@ -24,6 +24,10 @@ bdg_norm_multi <- function(bridge.str, data.ls, between.plate.method = "median",
     })%>%unlist()%>%sum() != 0
   ){
     stop("not all bridging samples exist in each plate!")
+  }
+
+  if(!is_null(ref_batch) & (!(ref_batch %in% names(data.ls)) | (length(ref_batch) > 1))){
+    stop("set a single ref_batch from names(data.ls)!")
   }
 
   names(bridge.str) <- bridge.str
@@ -37,9 +41,13 @@ bdg_norm_multi <- function(bridge.str, data.ls, between.plate.method = "median",
       summarize_all(.fun = mean, na.rm = T)
 
 
-    bridge.median <- bridge.plate.mean%>%
-      dplyr::select(-f_name)%>%
-      summarize_all(.funs = between.plate.method, na.rm = T)
+    if(is_null(ref_batch)){
+      bridge.median <- bridge.plate.mean%>%
+        dplyr::select(-f_name)%>%
+        summarize_all(.funs = between.plate.method, na.rm = T)
+    }else{
+      bridge.median <- bridge.plate.mean[bridge.plate.mean$f_name == ref_batch, -1]
+    }
 
 
     # update adjust factor
