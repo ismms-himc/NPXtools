@@ -26,7 +26,7 @@ bdg_norm_multi <- function(bridge.str, data.ls, between.plate.method = "median",
     stop("not all bridging samples exist in each plate!")
   }
 
-  if(!is_null(ref_batch) & (!(ref_batch %in% names(data.ls)) | (length(ref_batch) > 1))){
+  if(!is_null(ref_batch) & ( !isTRUE(ref_batch %in% names(data.ls)) | (length(ref_batch) > 1))){
     stop("set a single ref_batch from names(data.ls)!")
   }
 
