@@ -27,7 +27,7 @@ read_npx <- function(f, lot = "default", startrow = 8, type = "NPX"){
     npx[npx == ""] <- NA
   }
   else{
-    npx <- readxl::read_xlsx(f, sheet = which(readxl::excel_sheets(f) == "NPX Data"), col_names = F)
+    npx <- readxl::read_xlsx(f, sheet = 1, col_names = F)
     n_col <- length(npx[which(npx[, 1] == "LOD"), ])
   }
 
