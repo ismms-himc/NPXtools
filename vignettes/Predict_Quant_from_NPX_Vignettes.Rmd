@@ -4,7 +4,7 @@ author: "Jingjing Qi, Icahn School of Medicine"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Predict_Quant_from_NPX_Vignettes}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEngine{knitr::knitr}
   \usepackage[utf8]{inputenc}
 ---
 

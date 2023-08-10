@@ -23,7 +23,7 @@ read_npx <- function(f, lot = "default", startrow = 8, type = "NPX"){
     }else{
       npx <- read.csv(f, header = F)
     }
-    n_col <- length(npx[which(npx[, 1] == "LLOQ"), ])
+    n_col <- length(npx[which(npx[, 1] == "Assay warning"), ])
     npx[npx == ""] <- NA
   }
   else{
@@ -58,7 +58,9 @@ read_npx <- function(f, lot = "default", startrow = 8, type = "NPX"){
     data.frame()%>%
     set_colnames(unlist(row_feat[, 1]))%>%
     set_rownames(.$Assay)
-  colnames(rowData)[grep("LOD", colnames(rowData))] <- "LOD"
+  lod_idx <- grep("LOD", colnames(rowData))
+  rowData <- cbind(rowData[ ,-grep("LOD", colnames(rowData))],
+                   LOD  = rowData[ ,lod_idx[length(lod_idx)]])
   rowData$LOD <- as.numeric(rowData$LOD)
 
   colData <- cbind(unique_id, Assay = npx$Assay, f_name = toString(f), npx_ctrl)%>%

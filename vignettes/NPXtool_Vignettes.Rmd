@@ -4,7 +4,7 @@ author: "Jingjing Qi, Icahn School of Medicine"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Normalization_Workflow_Template}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEngine{knitr::knitr}
   \usepackage[utf8]{inputenc}
 ---
 
