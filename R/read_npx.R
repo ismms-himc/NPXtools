@@ -19,15 +19,14 @@ read_npx <- function(f, lot = "default", startrow = 8, type = "NPX"){
 
   if(type != "NPX"){
     if(grepl("xlsx", f)){
-      npx <- readxl::read_xlsx(f, sheet = 1, col_names = F)
+      npx <- readxl::read_xlsx(f, sheet = 1, col_names = F, .name_repair = "unique_quiet")
     }else{
       npx <- read.csv(f, header = F)
     }
     n_col <- length(npx[which(npx[, 1] == "Assay warning"), ])
     npx[npx == ""] <- NA
-  }
-  else{
-    npx <- readxl::read_xlsx(f, sheet = 1, col_names = F)
+  }else{
+    npx <- readxl::read_xlsx(f, sheet = 1, col_names = F, .name_repair = "unique_quiet")
     n_col <- length(npx[which(npx[, 1] == "LOD"), ])
   }
 
@@ -83,6 +82,7 @@ read_npx <- function(f, lot = "default", startrow = 8, type = "NPX"){
       t()
   }
 
+  rownames(npx) <- rownames(rowData)
   format(npx, digits = 5)
   re <- SummarizedExperiment(colData = colData,
                              rowData = rowData,
