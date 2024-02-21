@@ -14,9 +14,14 @@
 #'
 
 
-intensity_norm <- function(data.ls, save_assay = "int_normed" , from_assay = "npx", between.plate.method = "mean"){
+intensity_norm <- function(data.ls, save_assay = "normed" , from_assay = "npx", ref_batch = NULL, between.plate.method = "mean"){
+
+  if(!is_null(ref_batch) & ( !isTRUE(ref_batch %in% names(data.ls)) | (length(ref_batch) > 1))){
+    stop("set a single ref_batch from names(data.ls)!")
+  }
+
   if(is.null(names(data.ls))){
-    names(data.ls) <- paste("No", 1 : length(data.ls), sep = ".")
+    stop("set names using names(data.ls) = data.ls!")
   }
   query <- names(data.ls)
   names(query) <- query
@@ -25,10 +30,14 @@ intensity_norm <- function(data.ls, save_assay = "int_normed" , from_assay = "np
     apply(data.ls[[x]]@assays@data[[from_assay]], 1, "median", na.rm = T)
   })
 
-  all.mean <- median.ls%>%
-    do.call(what = "rbind")%>%
-    data.frame()%>%
-    summarize_all(between.plate.method, na.rm = T)
+  if(is_null(ref_batch)){
+    all.mean <- median.ls%>%
+      do.call(what = "rbind")%>%
+      data.frame()%>%
+      summarize_all(between.plate.method, na.rm = T)
+  }else{
+    all.mean <- median.ls[names(median.ls) == ref_batch][[1]]
+  }
 
   adj.ls <- lapply(query, function(x){
     median.ls[[x]] - all.mean

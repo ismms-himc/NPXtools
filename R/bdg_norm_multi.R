@@ -16,6 +16,11 @@
 #'
 bdg_norm_multi <- function(bridge.str, data.ls, between.plate.method = "median", ref_batch = NULL,
                      from_assay = "npx", save_assay = "normed"){
+
+  if(is.null(names(data.ls))){
+    stop("set names using names(data.ls) = data.ls!")
+  }
+
   if(
     sapply(bridge.str, function(x){
       lapply(data.ls, function(y){
